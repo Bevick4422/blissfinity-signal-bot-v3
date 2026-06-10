@@ -1,58 +1,110 @@
 import asyncio
+import json
+import os
 
 from config import (
-SYMBOLS,
-MAX_SIGNALS,
-TREND_TIMEFRAME,
-BOS_TIMEFRAME,
-ENTRY_TIMEFRAME
+    SYMBOLS,
+    MAX_SIGNALS,
+    TREND_TIMEFRAME,
+    BOS_TIMEFRAME,
+    ENTRY_TIMEFRAME
 )
 
-from scanner import get_market_data
+from scanner import (
+    get_market_data
+)
 
 from signal_engine import (
-bullish_trend,
-bearish_trend,
-bullish_bos,
-bearish_bos,
-bullish_pullback,
-bearish_pullback
+    bullish_trend,
+    bearish_trend,
+    bullish_bos,
+    bearish_bos,
+    bullish_pullback,
+    bearish_pullback,
+    near_demand,
+    near_supply
 )
 
-from telegram_sender import send_signal
+from telegram_sender import (
+    send_signal
+)
 
 from trade_tracker import (
-main as run_tracker
+    main as run_tracker
 )
 
-========================================
-MARKET SCANNER
-========================================
+SIGNAL_FILE = "signals.json"
 
-async def scan_market():
 
-print("\n========================")
-print("BLISSFINITY V3")
-print("========================\n")
+# ========================================
+# SIGNAL STORAGE
+# ========================================
 
-signals_sent = 0
+def load_signals():
 
-for pair in SYMBOLS:
+    if not os.path.exists(
+        SIGNAL_FILE
+    ):
 
-    if signals_sent >= MAX_SIGNALS:
-        break
-
-    print(f"Scanning {pair}...")
+        return {}
 
     try:
 
-        trend_df, bos_df, entry_df = get_market_data(
+        with open(
+            SIGNAL_FILE,
+            "r"
+        ) as f:
 
+            return json.load(f)
+
+    except:
+
+        return {}
+
+
+def save_signals(data):
+
+    with open(
+        SIGNAL_FILE,
+        "w"
+    ) as f:
+
+        json.dump(
+            data,
+            f,
+            indent=4
+        )
+
+
+# ========================================
+# MARKET SCAN
+# ========================================
+
+async def scan_market():
+
+    print("\n========================")
+    print("BLISSFINITY V3")
+    print("========================\n")
+
+    signal_history = load_signals()
+
+    signals_sent = 0
+
+    for pair in SYMBOLS:
+
+        if signals_sent >= MAX_SIGNALS:
+
+            break
+
+        print(
+            f"Scanning {pair}..."
+        )
+
+        trend_df, bos_df, entry_df = get_market_data(
             pair,
             TREND_TIMEFRAME,
             BOS_TIMEFRAME,
             ENTRY_TIMEFRAME
-
         )
 
         if (
@@ -61,17 +113,13 @@ for pair in SYMBOLS:
             or entry_df is None
         ):
 
-            print(
-                f"{pair} -> missing timeframe data"
-            )
-
             continue
 
-        # ====================================
-        # LONG
-        # ====================================
+        # ===================================
+        # LONG CONDITIONS
+        # ===================================
 
-        if (
+        long_setup = (
 
             bullish_trend(trend_df)
 
@@ -83,7 +131,45 @@ for pair in SYMBOLS:
 
             bullish_pullback(entry_df)
 
-        ):
+            and
+
+            near_demand(entry_df)
+
+        )
+
+        # ===================================
+        # SHORT CONDITIONS
+        # ===================================
+
+        short_setup = (
+
+            bearish_trend(trend_df)
+
+            and
+
+            bearish_bos(bos_df)
+
+            and
+
+            bearish_pullback(entry_df)
+
+            and
+
+            near_supply(entry_df)
+
+        )
+
+        # ===================================
+        # LONG
+        # ===================================
+
+        if long_setup:
+
+            previous = signal_history.get(pair)
+
+            if previous == "LONG":
+
+                continue
 
             entry = round(
                 float(
@@ -93,7 +179,7 @@ for pair in SYMBOLS:
             )
 
             stoploss = round(
-                entry * 0.985,
+                entry * 0.98,
                 4
             )
 
@@ -108,39 +194,33 @@ for pair in SYMBOLS:
             )
 
             await send_signal(
-
                 pair,
                 "LONG",
                 entry,
                 stoploss,
                 tp1,
                 tp2
-
             )
+
+            signal_history[pair] = "LONG"
+
+            signals_sent += 1
 
             print(
                 f"{pair} LONG SENT"
             )
 
-            signals_sent += 1
-
-        # ====================================
+        # ===================================
         # SHORT
-        # ====================================
+        # ===================================
 
-        elif (
+        elif short_setup:
 
-            bearish_trend(trend_df)
+            previous = signal_history.get(pair)
 
-            and
+            if previous == "SHORT":
 
-            bearish_bos(bos_df)
-
-            and
-
-            bearish_pullback(entry_df)
-
-        ):
+                continue
 
             entry = round(
                 float(
@@ -150,7 +230,7 @@ for pair in SYMBOLS:
             )
 
             stoploss = round(
-                entry * 1.015,
+                entry * 1.02,
                 4
             )
 
@@ -165,80 +245,84 @@ for pair in SYMBOLS:
             )
 
             await send_signal(
-
                 pair,
                 "SHORT",
                 entry,
                 stoploss,
                 tp1,
                 tp2
-
             )
+
+            signal_history[pair] = "SHORT"
+
+            signals_sent += 1
 
             print(
                 f"{pair} SHORT SENT"
             )
 
-            signals_sent += 1
-
         else:
 
-            print(
-                f"{pair} -> no setup"
-            )
+            signal_history[pair] = "NONE"
 
         await asyncio.sleep(1)
 
-    except Exception as e:
+    save_signals(
+        signal_history
+    )
 
-        print(
-            f"{pair} scan error:"
-        )
+    print("\n========================")
+    print("SCAN COMPLETE")
+    print("========================\n")
 
-        print(e)
 
-print("\n========================")
-print("SCAN COMPLETE")
-print("========================\n")
-========================================
-MASTER LOOP
-========================================
+# ========================================
+# MAIN LOOP
+# ========================================
 
 async def main():
 
-while True:
-
-    try:
-
-        await scan_market()
+    while True:
 
         try:
 
-            await run_tracker()
+            await scan_market()
+
+            try:
+
+                await run_tracker()
+
+            except Exception as e:
+
+                print(
+                    f"Tracker Error: {e}"
+                )
+
+            print(
+                "\nSleeping 5 Minutes...\n"
+            )
+
+            await asyncio.sleep(
+                300
+            )
 
         except Exception as e:
 
             print(
-                f"Tracker Error: {e}"
+                f"Bot Error: {e}"
             )
 
-        print(
-            "\nSleeping 5 minutes...\n"
-        )
+            await asyncio.sleep(
+                60
+            )
 
-        await asyncio.sleep(300)
 
-    except Exception as e:
+# ========================================
+# START
+# ========================================
 
-        print(
-            f"Bot Error: {e}"
-        )
+if __name__ == "__main__":
 
-        await asyncio.sleep(60)
-========================================
-START
-========================================
-
-if name == "main":
-
-asyncio.run(main())
+    asyncio.run(
+        main()
+    )

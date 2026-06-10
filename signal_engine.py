@@ -1,22 +1,29 @@
 import pandas as pd
 
-
 # =====================================
-# TREND
+# TREND FILTER (4H)
 # =====================================
 
 def bullish_trend(df):
 
     try:
 
-        ema20 = df["close"].rolling(20).mean()
-
-        return (
-            df["close"].iloc[-1]
-            > ema20.iloc[-1]
+        ema20 = (
+            df["close"]
+            .rolling(20)
+            .mean()
         )
 
-    except:
+        current = df["close"].iloc[-1]
+
+        return current > ema20.iloc[-1]
+
+    except Exception as e:
+
+        print(
+            f"bullish_trend error: {e}"
+        )
+
         return False
 
 
@@ -24,26 +31,34 @@ def bearish_trend(df):
 
     try:
 
-        ema20 = df["close"].rolling(20).mean()
-
-        return (
-            df["close"].iloc[-1]
-            < ema20.iloc[-1]
+        ema20 = (
+            df["close"]
+            .rolling(20)
+            .mean()
         )
 
-    except:
+        current = df["close"].iloc[-1]
+
+        return current < ema20.iloc[-1]
+
+    except Exception as e:
+
+        print(
+            f"bearish_trend error: {e}"
+        )
+
         return False
 
 
 # =====================================
-# BREAK OF STRUCTURE
+# BREAK OF STRUCTURE (1H)
 # =====================================
 
 def bullish_bos(df):
 
     try:
 
-        last_close = df["close"].iloc[-1]
+        current_close = df["close"].iloc[-1]
 
         previous_high = (
             df["high"]
@@ -51,9 +66,14 @@ def bullish_bos(df):
             .max()
         )
 
-        return last_close > previous_high
+        return current_close > previous_high
 
-    except:
+    except Exception as e:
+
+        print(
+            f"bullish_bos error: {e}"
+        )
+
         return False
 
 
@@ -61,7 +81,7 @@ def bearish_bos(df):
 
     try:
 
-        last_close = df["close"].iloc[-1]
+        current_close = df["close"].iloc[-1]
 
         previous_low = (
             df["low"]
@@ -69,26 +89,48 @@ def bearish_bos(df):
             .min()
         )
 
-        return last_close < previous_low
+        return current_close < previous_low
 
-    except:
+    except Exception as e:
+
+        print(
+            f"bearish_bos error: {e}"
+        )
+
         return False
 
 
 # =====================================
-# PULLBACK ENTRY
+# PULLBACK ENTRY (15M)
 # =====================================
 
 def bullish_pullback(df):
 
     try:
 
-        close = df["close"].iloc[-1]
-        low = df["low"].iloc[-5:].min()
+        current = df["close"].iloc[-1]
 
-        return close > low
+        recent_high = (
+            df["high"]
+            .iloc[-20:]
+            .max()
+        )
 
-    except:
+        pullback_zone = (
+            recent_high * 0.98
+        )
+
+        return (
+            current <= recent_high
+            and current >= pullback_zone
+        )
+
+    except Exception as e:
+
+        print(
+            f"bullish_pullback error: {e}"
+        )
+
         return False
 
 
@@ -96,17 +138,34 @@ def bearish_pullback(df):
 
     try:
 
-        close = df["close"].iloc[-1]
-        high = df["high"].iloc[-5:].max()
+        current = df["close"].iloc[-1]
 
-        return close < high
+        recent_low = (
+            df["low"]
+            .iloc[-20:]
+            .min()
+        )
 
-    except:
+        pullback_zone = (
+            recent_low * 1.02
+        )
+
+        return (
+            current >= recent_low
+            and current <= pullback_zone
+        )
+
+    except Exception as e:
+
+        print(
+            f"bearish_pullback error: {e}"
+        )
+
         return False
 
 
 # =====================================
-# SUPPLY / DEMAND FILTER
+# DEMAND FILTER
 # =====================================
 
 def near_demand(df):
@@ -121,13 +180,25 @@ def near_demand(df):
             .min()
         )
 
-        distance = abs(current - demand) / current
+        distance = (
+            abs(current - demand)
+            / current
+        )
 
         return distance <= 0.02
 
-    except:
+    except Exception as e:
+
+        print(
+            f"near_demand error: {e}"
+        )
+
         return False
 
+
+# =====================================
+# SUPPLY FILTER
+# =====================================
 
 def near_supply(df):
 
@@ -141,9 +212,17 @@ def near_supply(df):
             .max()
         )
 
-        distance = abs(current - supply) / current
+        distance = (
+            abs(current - supply)
+            / current
+        )
 
         return distance <= 0.02
 
-    except:
+    except Exception as e:
+
+        print(
+            f"near_supply error: {e}"
+        )
+
         return False
