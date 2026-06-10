@@ -1,21 +1,23 @@
 import requests
 import pandas as pd
 
-TIMEFRAME_MAP = {
-
 # ========================================
 # MEXC TIMEFRAME MAP
 # ========================================
 
 TIMEFRAME_MAP = {
+
     "Min1": "Min1",
     "Min5": "Min5",
     "Min15": "Min15",
     "Min30": "Min30",
     "Min60": "Min60",
+
     "Hour4": "Hour4",
     "Hour8": "Hour8",
+
     "Day1": "Day1"
+
 }
 
 # ========================================
