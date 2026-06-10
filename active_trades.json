@@ -1,0 +1,17 @@
+[
+    {
+        "pair": "ETH_USDT",
+        "direction": "SHORT",
+        "entry": 1991.62,
+        "sl": 2021.49,
+        "tp1": 1951.79,
+        "tp2": 1911.95,
+
+        "status": "OPEN",
+
+        "tp1_hit": false,
+        "tp2_hit": false,
+
+        "opened_at": "2026-05-31 00:00:00"
+    }
+]

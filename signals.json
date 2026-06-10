@@ -1,0 +1,133 @@
+import pandas as pd
+
+# ========================================
+
+# 4H MARKET STRUCTURE
+
+# ========================================
+
+def bullish_structure(df):
+
+```
+try:
+
+    latest_close = df["close"].iloc[-1]
+
+    previous_high = (
+        df["high"]
+        .iloc[-10:-1]
+        .max()
+    )
+
+    return latest_close > previous_high
+
+except:
+
+    return False
+```
+
+def bearish_structure(df):
+
+```
+try:
+
+    latest_close = df["close"].iloc[-1]
+
+    previous_low = (
+        df["low"]
+        .iloc[-10:-1]
+        .min()
+    )
+
+    return latest_close < previous_low
+
+except:
+
+    return False
+```
+
+# ========================================
+
+# 1H ENTRY CONFIRMATION
+
+# ========================================
+
+def bullish_entry(df):
+
+```
+try:
+
+    close = df["close"]
+
+    ema20 = close.ewm(
+        span=20,
+        adjust=False
+    ).mean()
+
+    latest_close = close.iloc[-1]
+
+    latest_open = (
+        df["open"]
+        .iloc[-1]
+    )
+
+    bullish_candle = (
+        latest_close >
+        latest_open
+    )
+
+    above_ema = (
+        latest_close >
+        ema20.iloc[-1]
+    )
+
+    return (
+        bullish_candle
+        and
+        above_ema
+    )
+
+except:
+
+    return False
+```
+
+def bearish_entry(df):
+
+```
+try:
+
+    close = df["close"]
+
+    ema20 = close.ewm(
+        span=20,
+        adjust=False
+    ).mean()
+
+    latest_close = close.iloc[-1]
+
+    latest_open = (
+        df["open"]
+        .iloc[-1]
+    )
+
+    bearish_candle = (
+        latest_close <
+        latest_open
+    )
+
+    below_ema = (
+        latest_close <
+        ema20.iloc[-1]
+    )
+
+    return (
+        bearish_candle
+        and
+        below_ema
+    )
+
+except:
+
+    return False
+```
