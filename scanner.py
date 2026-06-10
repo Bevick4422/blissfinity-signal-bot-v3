@@ -1,6 +1,7 @@
-python
 import requests
 import pandas as pd
+
+TIMEFRAME_MAP = {
 
 # ========================================
 # MEXC TIMEFRAME MAP
